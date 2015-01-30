@@ -48,4 +48,10 @@ setup(
             'cpp-coveralls = cpp_coveralls:run',
         ],
     },
+    test_suite='nose.collector',
+    setup_requires=[
+        'coverage',
+        'flake8',
+        'nose'
+    ]
 )
