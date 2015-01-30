@@ -11,9 +11,14 @@ from . import coverage
 class CoverageTest(unittest.TestCase):
     def test_exclude_pattern(self):
         """Test using regular expression for exclusion rules."""
-        args = coverage.create_args(['-E', r'/abc.*\.txt'])
-        self.assertTrue(coverage.is_excluded_path(args, '/abcd.txt'))
-        self.assertFalse(coverage.is_excluded_path(args, '/cd.txt'))
+        args = coverage.create_args(['-i', '/src/foo', '-i', '/src/bar', '-e', '/src/foo/subfoo', '-E', r'.*crap.*'])
+        self.assertTrue(coverage.is_excluded_path(args, '/foo.txt'))
+        self.assertTrue(coverage.is_excluded_path(args, '/src/baz/baz.txt'))
+        self.assertFalse(coverage.is_excluded_path(args, '/src/foo/foo.txt'))
+        self.assertFalse(coverage.is_excluded_path(args, '/src/bar/foo.txt'))
+        self.assertTrue(coverage.is_excluded_path(args, '/src/foo/foo-crap-foo.txt'))
+        self.assertTrue(coverage.is_excluded_path(args, '/src/bar/bar-crap-bar.txt'))
+        self.assertTrue(coverage.is_excluded_path(args, '/src/foo/subfoo/subfoo.txt'))
 
     def test_mix_include_and_exclude_patten(self):
         """Test mix include pattens with exludes."""
@@ -26,7 +31,6 @@ class CoverageTest(unittest.TestCase):
                                                    "src/but-this-file.c"))
         self.assertTrue(coverage.is_excluded_path(args,
                                                   "src/someuselessthing"))
-
 
     def test_try_encodings(self):
         with tempfile.NamedTemporaryFile(mode='wb') as output_file:

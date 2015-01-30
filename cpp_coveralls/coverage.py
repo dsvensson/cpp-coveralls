@@ -42,9 +42,9 @@ def create_args(params):
                              'the same directory as the compiler in order '
                              'to find the source files')
     parser.add_argument('-e', '--exclude', metavar='DIR|FILE', action='append',
-                        help='set exclude file or directory')
+                        help='set exclude file or directory', default=[])
     parser.add_argument('-i', '--include', metavar='DIR|FILE', action='append',
-                        help='set include file or directory')
+                        help='set include file or directory', default=[])
     parser.add_argument('-E', '--exclude-pattern', dest='regexp',
                         action='append', metavar='REGEXP', default=[],
                         help='set exclude file/directory pattern')
@@ -87,36 +87,38 @@ def exclude_paths(args):
     return results
 
 
+def common_prefix(filepath, paths):
+    result = ""
+    for path in paths:
+        prefix = os.path.commonprefix([filepath, path])
+        if path != prefix:
+            continue
+        if len(path) > len(result):
+            result = prefix
+    return result
+
+def abspaths(root, paths):
+    """Returns the absolute paths for some paths."""
+    result = []
+    for path in paths:
+        if not os.path.isabs(path):
+            path = os.path.abspath(os.path.join(root, path))
+        result.append(path)
+    return result
+
 def is_excluded_path(args, filepath):
-    """Returns true if the filepath is under the one of the exclude path."""
-    if args.include:
-        abspath = os.path.abspath(filepath)
-        for incl_path in args.include:
-            if os.path.isdir(incl_path):
-                relpath = os.path.relpath(abspath, incl_path)
-                if len(relpath) > 3 and relpath[:3] != '../':
-                    return False
-            else:
-                absincl_path = os.path.abspath(incl_path)
-                if abspath == absincl_path:
-                    return False
-    excl_paths = exclude_paths(args)
-    # Try regular expressions first.
+    """Returns true if the file is to be excluded."""
+    filepath = abspaths(args.root, [filepath])[0]
     for regexp_exclude_path in args.regexp:
         if re.match(regexp_exclude_path, filepath):
             return True
-    abspath = os.path.abspath(filepath)
-    for excluded_path in excl_paths:
-        if os.path.isdir(excluded_path):
-            relpath = os.path.relpath(abspath, excluded_path)
-            if len(relpath) > 3 and relpath[:3] != '../':
-                return True
-        else:
-            absexcludefile = os.path.abspath(excluded_path)
-            if absexcludefile == abspath:
-                return True
+    longest_include = common_prefix(filepath, abspaths(args.root, args.include or [args.root]))
+    if not longest_include:
+        return True
+    longest_exclude = common_prefix(filepath, abspaths(args.root, args.exclude))
+    if longest_exclude and not common_prefix(longest_include, [longest_exclude]):
+        return True
     return False
-
 
 def is_libtool_dir(dir_path):
     return os.path.basename(dir_path) == ".libs"
